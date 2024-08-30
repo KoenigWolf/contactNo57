@@ -1,41 +1,35 @@
+// フィールドIDのリスト
+const fieldIds = ['company-name', 'name', 'phone', 'email', 'message'];
+
 // フォームのバリデーション関数
 function validateForm() {
-  let isValid = true;
-
-  // 各フィールドのバリデーション
-  isValid = validateField('company-name') && isValid;
-  isValid = validateField('name') && isValid;
-  isValid = validateField('phone') && isValid;
-  isValid = validateField('email') && isValid;
-  isValid = validateField('message') && isValid;
-
-  return isValid;
+  return fieldIds.every(validateField);
 }
 
 // 各フィールドのバリデーション関数
 function validateField(fieldId) {
   const field = document.getElementById(fieldId);
   const errorField = document.getElementById(`${fieldId}-error`);
-  
-  if (field.value.trim() === '') {
-    errorField.style.display = 'block';
-    return false;
-  } else {
-    errorField.style.display = 'none';
-    return true;
-  }
+
+  if (!field || !errorField) return false;
+
+  const isValid = field.value.trim() !== '';
+  errorField.style.display = isValid ? 'none' : 'block';
+
+  return isValid;
 }
 
 // フォームの確認画面にデータを表示する関数
 function showConfirmation() {
-  document.getElementById('confirm-company-name').textContent = sanitizeInput(document.getElementById('company-name').value);
-  document.getElementById('confirm-name').textContent = sanitizeInput(document.getElementById('name').value);
-  document.getElementById('confirm-phone').textContent = sanitizeInput(document.getElementById('phone').value);
-  document.getElementById('confirm-email').textContent = sanitizeInput(document.getElementById('email').value);
-  document.getElementById('confirm-message').textContent = sanitizeInput(document.getElementById('message').value);
-  
-  document.getElementById('contact-form').style.display = 'none';
-  document.getElementById('confirmation-form').style.display = 'block';
+  fieldIds.forEach(fieldId => {
+    const confirmFieldId = `confirm-${fieldId}`;
+    const confirmField = document.getElementById(confirmFieldId);
+    const inputValue = sanitizeInput(document.getElementById(fieldId).value);
+
+    if (confirmField) confirmField.textContent = inputValue;
+  });
+
+  toggleFormVisibility('contact-form', 'confirmation-form');
 }
 
 // 入力データのエスケープ処理関数（XSS対策）
@@ -45,20 +39,19 @@ function sanitizeInput(input) {
   return div.innerHTML;
 }
 
-// 戻るボタンの処理関数
-function goBackToForm() {
-  document.getElementById('confirmation-form').style.display = 'none';
-  document.getElementById('contact-form').style.display = 'block';
+// フォームと確認画面の表示切り替え関数
+function toggleFormVisibility(hideFormId, showFormId) {
+  document.getElementById(hideFormId).style.display = 'none';
+  document.getElementById(showFormId).style.display = 'block';
 }
 
 // フォームデータの送信関数
 async function submitForm() {
   const formData = new FormData();
-  formData.append('company', document.getElementById('company-name').value);
-  formData.append('name', document.getElementById('name').value);
-  formData.append('phone', document.getElementById('phone').value);
-  formData.append('email', document.getElementById('email').value);
-  formData.append('message', document.getElementById('message').value);
+
+  fieldIds.forEach(fieldId => {
+    formData.append(fieldId, document.getElementById(fieldId).value);
+  });
 
   try {
     const response = await fetch('/submit', {
@@ -67,15 +60,24 @@ async function submitForm() {
     });
 
     if (response.ok) {
-      document.getElementById('confirmation-form').style.display = 'none';
-      document.getElementById('complete-form').style.display = 'block';
+      toggleFormVisibility('confirmation-form', 'complete-form');
     } else {
-      alert('送信中にエラーが発生しました。');
+      handleFormSubmissionError();
     }
   } catch (error) {
     console.error('Error:', error);
-    alert('送信中にエラーが発生しました。');
+    handleFormSubmissionError();
   }
+}
+
+// 送信エラーのハンドリング関数
+function handleFormSubmissionError() {
+  alert('送信中にエラーが発生しました。');
+}
+
+// 戻るボタンの処理関数
+function goBackToForm() {
+  toggleFormVisibility('confirmation-form', 'contact-form');
 }
 
 // 戻るボタン（送信完了画面から）の処理関数
